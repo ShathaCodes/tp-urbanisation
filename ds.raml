@@ -1,0 +1,68 @@
+  #%RAML 1.0
+
+  resourceTypes:
+   Collection:
+     get:
+       responses:
+         200:
+           body:
+             application/json:
+               type: <<item>>[]
+     post:
+       body:
+         application/json:
+           type: <<item>>
+     put:
+       body:
+         application/json:
+           type: <<item>>
+   Member:
+     delete:
+       responses:
+         204:
+     get:
+       responses:
+         200:
+           body:
+             application/json:
+               type: <<item>>
+ 
+
+  title: dsf
+  version: v1
+  baseUri: /employees
+  types:
+   Employee:
+     properties:
+       id: number
+       name: string
+       salary: number
+     example:
+       id: 2
+       name: Dog
+       salary: 1000
+
+
+  /employees:
+    get:
+  
+    type: { Collection: {item : Employee} }
+        
+    /{id}:
+      type: { Member: {item : Employee} }
+      
+      /salary/euro:
+        get:
+         responses:
+          200:
+           body:
+            application/json:
+               type: number
+      
+      /salary/dollar:
+        get:
+         responses:
+          200:
+           body:
+            application/json:
+               type: number

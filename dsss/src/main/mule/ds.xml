@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <http:listener-config name="ds-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="ds-config" api="ds.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="21a6b79c-2af8-41c6-861f-65619e42ea45" >
+		<http:request-connection host="localhost" port="8080" />
+	</http:request-config>
+	<flow name="ds-main">
+        <http:listener config-ref="ds-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="ds-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="ds-console">
+        <http:listener config-ref="ds-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="ds-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\employees:application\json:ds-config">
+        <http:listener doc:name="Listener" doc:id="f0c37694-65ba-4072-bd4f-9b96909b2c5c" config-ref="ds-httpListenerConfig" path="/update-employee"/>
+		<http:request method="PUT" doc:name="Request" doc:id="12059ce2-a189-4031-9a81-cd3a20b0c457" config-ref="HTTP_Request_configuration" path="/employees">
+			<http:body ><![CDATA[#[{
+	"id":1,
+	"name" : "Chadha Siala",
+	"salary": 1000
+}]]]></http:body>
+		</http:request>
+    </flow>
+    <flow name="delete:\employees\(id):ds-config">
+        <http:listener doc:name="Listener" doc:id="6cf54b80-2e99-4c06-bfb7-816015f220f6" config-ref="ds-httpListenerConfig" path="/delete-employee"/>
+		<http:request method="DELETE" doc:name="Request" doc:id="99da3af6-a4fc-4299-a172-70194dabb813" config-ref="HTTP_Request_configuration" path="/employees/(id)"/>
+    </flow>
+    <flow name="get:\employees:ds-config">
+        <http:listener doc:name="Listener" doc:id="c0937d30-95e1-480d-a14d-ef4b3fbbee8e" config-ref="ds-httpListenerConfig" path="/all-employees"/>
+		<http:request method="GET" doc:name="Request" doc:id="8523411b-a8f7-4db0-8f48-d83a39ed809e" config-ref="HTTP_Request_configuration" path="/employees"/>
+    </flow>
+    <flow name="get:\employees\(id)\salary\dollar:ds-config">
+        <http:listener doc:name="Listener" doc:id="dd34389f-9783-4307-9636-f5e446fa836d" config-ref="ds-httpListenerConfig" path="/employee/salary/dollar"/>
+		<http:request method="GET" doc:name="Request" doc:id="59849067-1e20-41a0-8b4a-58082f132276" path="/employees/(id)/salary/dollar" config-ref="HTTP_Request_configuration"/>
+    </flow>
+    <flow name="get:\employees\(id)\salary\euro:ds-config">
+		<http:listener doc:name="Listener" doc:id="2c901fb5-e571-41aa-a746-d4ec85850a20" config-ref="ds-httpListenerConfig" path="/employee/salary/euro"/>
+		<http:request method="GET" doc:name="Request" doc:id="e602032d-17d9-4a2c-8fed-ab561893c783" config-ref="HTTP_Request_configuration" path="/employees/(id)/salary/euro"/>
+    </flow>
+    <flow name="get:\employees\(id):ds-config">
+        <http:listener doc:name="Listener" doc:id="53e67107-ad25-46c8-a3ea-e8ad728da90c" config-ref="ds-httpListenerConfig" path="/employee"/>
+		<http:request method="GET" doc:name="Request" doc:id="5c2f4f04-f695-49f4-a575-9ba4425c3709" config-ref="HTTP_Request_configuration" path="/emplyees/(id)"/>
+    </flow>
+    <flow name="post:\employees:application\json:ds-config">
+		<http:listener doc:name="Listener" doc:id="458dbb27-dfb0-4d1d-a4de-d75cc729b546" config-ref="ds-httpListenerConfig" path="/add-employee"/>
+		<http:request method="POST" doc:name="Request" doc:id="c4238ab9-4578-48af-ba2a-e53328c54775" config-ref="HTTP_Request_configuration" path="/employees">
+			<http:body ><![CDATA[#[{
+	"name" : "Chadha Siala",
+	"salary": 3000
+}]]]></http:body>
+		</http:request>
+    </flow>
+</mule>
